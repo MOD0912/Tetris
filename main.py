@@ -1,7 +1,15 @@
-import customtkinter as ctk
-ctk.deactivate_automatic_dpi_awareness()
+'''
+Mielvin Kapferer
+'''
+
 import time
 import random
+import customtkinter as ctk
+
+
+
+ctk.deactivate_automatic_dpi_awareness()
+
 class GUI(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -46,15 +54,24 @@ class Logic:
         self.cl = True
         self.active_labels = []                                                                                   
         actions = ["<Left>", "<Right>", "<Down>", "<space>"]
+        self.end = False
         for action in actions:
             gui.bind(action, self.move)
         
         gui.bind("<Up>", self.spawn_random)
         gui.bind("<space>", self.move)
         
-        self.figures = [[(0, 0), (0, 1), (0, 2), (0, 3)], [(0, 0), (0, 1), (0, 2), (1, 0)], [(0, 0), (0, 1), (0, 2), (1, 2)], [(0, 0), (0, 1), (0, 2), (1, 1)], [(0, 0), (0, 1), (0, 2), (1, 2)], [(0, 0), (0, 1), (0, 2), (1, 0)], [(0, 0), (0, 1), (0, 2), (1, 1)]]
-        # self.figures = [[(0, 0), (1, 0), (2, 0), (3, 0), (4, 0)]]
-        # self.figures = [[(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1), (3, 0), (3, 1), (4, 0), (4, 1)]]
+        #self.figures = [[(0, 0), (0, 1), (0, 2), (0, 3)], [(0, 0), (0, 1), (0, 2), (1, 0)], [(0, 0), (0, 1), (0, 2), (1, 2)], [(0, 0), (0, 1), (0, 2), (1, 1)], [(0, 0), (0, 1), (0, 2), (1, 2)], [(0, 0), (0, 1), (0, 2), (1, 0)], [(0, 0), (0, 1), (0, 2), (1, 1)]]
+        #move every figure to the right
+        self.figures = [                                  # Shapes:
+                        [(4, 0), (4, 1), (4, 2), (4, 3)], # line
+                        [(4, 0), (4, 1), (4, 2), (5, 2)], # L
+                        [(4, 0), (4, 1), (4, 2), (5, 1)], # T right
+                        [(4, 0), (4, 1), (4, 2), (5, 0)], # reverse L
+                        [(4, 0), (4, 1), (5, 0), (5, 1)], # square
+                        [(4, 0), (4, 1), (5, 1), (5, 2)], # Z
+                        [(4, 0), (4, 1), (5, 0), (5, 1)]  # reverse Z
+                        ]
         self.pos_labels = [[" " for i in range(10)] for j in range(20)]
         self.cl_time = 500
         self.check()
@@ -69,17 +86,27 @@ class Logic:
             i.grid(row=i.row, column=i.col, sticky="nsew")
             if i.row == 19 or self.pos_labels[i.row+1][i.col] != " ":
                 retur = True
+            else:
+                i.moved = True
         
         if retur:
+            self.moved = False
             for i in self.active_labels:
                 self.pos_labels[i.row][i.col] = i
+                if i.moved:
+                    self.moved = True
+            
+            if not self.moved:
+                print("game over")
+                self.end = True
             self.active_labels.clear()
+        
+            self.spawn_random()
             print("clear")
             return
         gui.after(self.cl_time, self.clock)
         
     def check(self):
-        
         for i in self.pos_labels:
             if " " not in i:
                 print("full")
@@ -105,9 +132,13 @@ class Logic:
         gui.after(100, self.check)
 
     def spawn_random(self, event=None):
+        if self.end:
+            return
         random_figure = random.choice(self.figures)
+        color = random.choice(["red", "blue", "green", "yellow", "purple", "orange", "pink"])
         for i in random_figure:
-            self.active_labels.append(Create_Label(gui.main_frame, i[0], i[1]))
+            self.active_labels.append(Create_Label(gui.main_frame, color, i[0], i[1]))
+        self.cl_time = 500
         self.clock()
 
 
@@ -115,21 +146,24 @@ class Logic:
         var = event.keysym
         if var == "Left":
             for i in self.active_labels:
-                if i.col == 0:
+                if i.col == 0 or self.pos_labels[i.row][i.col-1] != " ":
                     return
             for i in self.active_labels:
                 i.col -= 1
+                i.grid(row=i.row, column=i.col, sticky="nsew")  
+
 
         if var == "Right":
             for i in self.active_labels:
-                if i.col == 9:
+                if i.col == 9 or self.pos_labels[i.row][i.col+1] != " ":
                     return
             for i in self.active_labels:
                 i.col += 1
+                i.grid(row=i.row, column=i.col, sticky="nsew")  
         
         if var == "space":
             for i in self.pos_labels:
-                print(i)
+                ...
         
         if var == "Down":
             self.cl_time = 100
@@ -137,12 +171,14 @@ class Logic:
         print(event.keysym)
             
         
-        
 class Create_Label(ctk.CTkLabel):
-    def __init__(self, main_frame, col, row):
-        super().__init__(main_frame, fg_color="red", text="", height=50, width=50)
+    def __init__(self, main_frame, color, col, row):
+        super().__init__(main_frame, fg_color=color, text="", height=50, width=50)
         self.col = col
         self.row = row
+        self.moved = False
+
+        #if self.col :
         self.grid(row=self.row, column=self.col, sticky="nsew") 
         gui.labels.append(self)
     
