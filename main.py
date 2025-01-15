@@ -5,6 +5,7 @@ Mielvin Kapferer
 import time
 import random
 import customtkinter as ctk
+from english_words import get_english_words_set
 
 
 
@@ -58,19 +59,19 @@ class Logic:
         for action in actions:
             gui.bind(action, self.move)
         
-        gui.bind("<Up>", self.spawn_random)
+        #gui.bind("<Up>", self.spawn_random)
         gui.bind("<space>", self.move)
         
         #self.figures = [[(0, 0), (0, 1), (0, 2), (0, 3)], [(0, 0), (0, 1), (0, 2), (1, 0)], [(0, 0), (0, 1), (0, 2), (1, 2)], [(0, 0), (0, 1), (0, 2), (1, 1)], [(0, 0), (0, 1), (0, 2), (1, 2)], [(0, 0), (0, 1), (0, 2), (1, 0)], [(0, 0), (0, 1), (0, 2), (1, 1)]]
         #move every figure to the right
         self.figures = [                                  # Shapes:
-                        [(4, 0), (4, 1), (4, 2), (4, 3)], # line
-                        [(4, 0), (4, 1), (4, 2), (5, 2)], # L
-                        [(4, 0), (4, 1), (4, 2), (5, 1)], # T right
-                        [(4, 0), (4, 1), (4, 2), (5, 0)], # reverse L
-                        [(4, 0), (4, 1), (5, 0), (5, 1)], # square
-                        [(4, 0), (4, 1), (5, 1), (5, 2)], # Z
-                        [(4, 0), (4, 1), (5, 0), (5, 1)]  # reverse Z
+                        [0, (4, 0), (4, 1), (4, 2), (4, 3)], # line
+                        [1, (4, 0), (4, 1), (4, 2), (5, 2)], # L
+                        [2, (4, 0), (4, 1), (4, 2), (5, 1)], # T right
+                        [3, (4, 0), (4, 1), (4, 2), (5, 0)], # reverse L
+                        [4, (4, 0), (4, 1), (5, 0), (5, 1)], # square
+                        [5, (4, 0), (4, 1), (5, 1), (5, 2)], # Z
+                        [6, (4, 0), (4, 1), (5, 0), (5, 1)]  # reverse Z
                         ]
         self.pos_labels = [[" " for i in range(10)] for j in range(20)]
         self.cl_time = 500
@@ -78,15 +79,40 @@ class Logic:
         gui.after(200, self.spawn_random)
 
 
-   
+    def rotate_figure(self):
+        min_row = min(i.row for i in self.active_labels)
+        min_col = min(i.col for i in self.active_labels)
+        max_row = max(i.row for i in self.active_labels)
+        max_col = max(i.col for i in self.active_labels)
+        center_row = (min_row + max_row) // 2
+        center_col = (min_col + max_col) // 2
+        new_positions = []
+        for i in self.active_labels:
+            new_row = center_col - (i.col - center_col)
+            new_col = center_row + (i.row - center_row)
+            # Check if the new position is within the grid and doesn't collide with existing figures
+            if new_row < 0 or new_row > 19 or new_col < 0 or new_col > 9 or self.pos_labels[new_row][new_col] != " ":
+                return
+            new_positions.append((new_row, new_col))
+        # Update the positions of the labels and the pos_labels list
+        for i in zip(self.active_labels, new_positions):
+            i[0].row, i[0].col = i[1]
+            self.pos_labels[i[0].row][i[0].col] = i[0]
+            self.pos_labels[i[1][0]][i[1][1]] = " "
+        # Update the grid positions of the labels
+        for i in self.active_labels:
+            i.grid(row=i.row, column=i.col, sticky="nsew")
+
     def clock(self):
         retur = False
         for i in self.active_labels:
             i.row += 1
             i.grid(row=i.row, column=i.col, sticky="nsew")
             if i.row == 19 or self.pos_labels[i.row+1][i.col] != " ":
+                print("retur")
                 retur = True
             else:
+                print(i.row, i.col)
                 i.moved = True
         
         if retur:
@@ -137,6 +163,8 @@ class Logic:
         random_figure = random.choice(self.figures)
         color = random.choice(["red", "blue", "green", "yellow", "purple", "orange", "pink"])
         for i in random_figure:
+            if type(i) == int:
+                continue
             self.active_labels.append(Create_Label(gui.main_frame, color, i[0], i[1]))
         self.cl_time = 500
         self.clock()
@@ -152,18 +180,24 @@ class Logic:
                 i.col -= 1
                 i.grid(row=i.row, column=i.col, sticky="nsew")  
 
+            for i in self.pos_labels:
+                lst = []
+                for j in i:
+                    lst.append((j.row, j.col) if j != " " else " ")
+                print(lst)
 
         if var == "Right":
             for i in self.active_labels:
                 if i.col == 9 or self.pos_labels[i.row][i.col+1] != " ":
                     return
+                
             for i in self.active_labels:
                 i.col += 1
                 i.grid(row=i.row, column=i.col, sticky="nsew")  
         
         if var == "space":
-            for i in self.pos_labels:
-                ...
+            self.rotate_figure()
+                
         
         if var == "Down":
             self.cl_time = 100
@@ -178,13 +212,10 @@ class Create_Label(ctk.CTkLabel):
         self.row = row
         self.moved = False
 
-        #if self.col :
         self.grid(row=self.row, column=self.col, sticky="nsew") 
         gui.labels.append(self)
     
 
-
-        
 
 if __name__ == "__main__":
     gui = GUI()
